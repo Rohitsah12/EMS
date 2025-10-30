@@ -4,7 +4,7 @@ import type {
   GetAllLeavesQuery, 
   UpdateLeaveStatusBody 
 } from '../api/validation/leave.validation.js';
-import type { Prisma, LeaveStatus } from '@prisma/client';
+import { type Prisma, type LeaveStatus, AttendanceStatus } from '@prisma/client';
 
 class LeaveService {
 
@@ -128,87 +128,52 @@ class LeaveService {
     hrEmployeeId: string,
     remarks?: string
   ) {
-    try {
-      // 1. Verify HR employee exists and has HR role
-      const hrEmployee = await prisma.employee.findUnique({
-        where: { id: hrEmployeeId },
-        select: { 
-          id: true, 
-          role: true,
-          isActive: true,
-        },
-      });
+    const hrEmployee = await prisma.employee.findUnique({
+      where: { id: hrEmployeeId },
+      select: { id: true, role: true, isActive: true },
+    });
 
-      if (!hrEmployee) {
-        throw new ApiError('HR employee not found', 404);
-      }
+    if (!hrEmployee || hrEmployee.role !== 'HR' || !hrEmployee.isActive) {
+      throw new ApiError('HR employee is not authorized or not found', 403);
+    }
 
-      if (hrEmployee.role !== 'HR') {
-        throw new ApiError('Only HR employees can approve/reject leave requests', 403);
-      }
+    const leave = await prisma.leave.findUnique({
+      where: { id: leaveId },
+      include: {
+        employee: { select: { id: true, isActive: true } },
+      },
+    });
 
-      if (!hrEmployee.isActive) {
-        throw new ApiError('HR employee account is inactive', 403);
-      }
+    if (!leave) {
+      throw new ApiError('Leave request not found', 404);
+    }
 
-      // 2. Find the leave request with employee details
-      const leave = await prisma.leave.findUnique({
-        where: { id: leaveId },
-        include: {
-          employee: {
-            select: {
-              id: true,
-              employeeId: true,
-              name: true,
-              email: true,
-              isActive: true,
-            },
-          },
-        },
-      });
+    if (leave.status !== 'PENDING') {
+      throw new ApiError(
+        `This leave request has already been ${leave.status.toLowerCase()}`,
+        400
+      );
+    }
 
-      if (!leave) {
-        throw new ApiError('Leave request not found', 404);
-      }
+    if (!leave.employee.isActive) {
+      throw new ApiError('Cannot update leave request for inactive employee', 400);
+    }
 
-      if (leave.status !== 'PENDING') {
-        throw new ApiError(
-          `This leave request has already been ${leave.status.toLowerCase()}`,
-          400
-        );
-      }
+    if (leave.employeeId === hrEmployeeId) {
+      throw new ApiError('You cannot approve or reject your own leave request', 403);
+    }
 
-      if (!leave.employee.isActive) {
-        throw new ApiError(
-          'Cannot update leave request for inactive employee',
-          400
-        );
-      }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (leave.startDate < today && status === 'APPROVED') {
+      throw new ApiError('Cannot approve leave requests with past start dates', 400);
+    }
 
-      if (leave.employeeId === hrEmployeeId) {
-        throw new ApiError(
-          'You cannot approve or reject your own leave request',
-          403
-        );
-      }
-
-      // 6. Check if leave dates are in the past
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const leaveStartDate = new Date(leave.startDate);
-      leaveStartDate.setHours(0, 0, 0, 0);
-
-      if (leaveStartDate < today && status === 'APPROVED') {
-        throw new ApiError(
-          'Cannot approve leave requests with past start dates',
-          400
-        );
-      }
-
-      const updatedLeave = await prisma.leave.update({
+    const [updatedLeave] = await prisma.$transaction(async (tx) => {
+      const leaveUpdate = await tx.leave.update({
         where: { id: leaveId },
         data: {
-          status: status as LeaveStatus,
+          status: status,
           actionAt: new Date(),
           approvedById: hrEmployeeId,
         },
@@ -220,46 +185,59 @@ class LeaveService {
               name: true,
               email: true,
               designation: true,
-              department: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
+              department: { select: { id: true, name: true } },
             },
           },
           approvedBy: {
-            select: {
-              id: true,
-              employeeId: true,
-              name: true,
-              email: true,
-            },
+            select: { id: true, employeeId: true, name: true, email: true },
           },
         },
       });
 
-      // 8. Log the action (optional - implement based on your logging strategy)
-      console.log(
-        `Leave ${status} by HR ${hrEmployee.id} for employee ${leave.employee.employeeId}`,
-        remarks ? `Remarks: ${remarks}` : ''
-      );
+      if (status === 'APPROVED') {
+        const dates = [];
+        let currentDate = new Date(leaveUpdate.startDate);
+        const endDate = new Date(leaveUpdate.endDate);
 
-      return updatedLeave;
-    } catch (error) {
-      // Re-throw ApiError instances
-      if (error instanceof ApiError) {
-        throw error;
+        while (currentDate <= endDate) {
+          dates.push(new Date(currentDate));
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+       
+        const attendancePromises = dates.map((date) =>
+          tx.attendance.upsert({
+            where: {
+              employeeId_date: { 
+                employeeId: leaveUpdate.employeeId,
+                date: date,
+              },
+            },
+            update: {
+              status: AttendanceStatus.ON_LEAVE,
+              notes: `Updated by approved leave ${leaveUpdate.id}`,
+            },
+            create: {
+              employeeId: leaveUpdate.employeeId,
+              date: date,
+              status: AttendanceStatus.ON_LEAVE,
+              notes: `Auto-generated from approved leave ${leaveUpdate.id}`,
+            },
+          })
+        );
+        
+        await Promise.all(attendancePromises);
       }
 
-      // Handle Prisma errors
-      if (error instanceof Error) {
-        console.error('Error updating leave status:', error);
-        throw new ApiError('Failed to update leave status', 500);
-      }
+      return [leaveUpdate];
+    });
 
-      throw new ApiError('An unexpected error occurred', 500);
-    }
+    console.log(
+      `Leave ${status} by HR ${hrEmployee.id} for employee ${updatedLeave.employee.id}`,
+      remarks ? `Remarks: ${remarks}` : ''
+    );
+
+    return updatedLeave;
   }
 
   

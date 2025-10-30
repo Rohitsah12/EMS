@@ -58,13 +58,11 @@ const getAllLeaves = asyncHandler(
 const updateLeaveStatus = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         try {
-            // 1. Get HR user from authenticated request
             const hrEmployeeId = req.user?.id;
             if (!hrEmployeeId) {
                 throw new ApiError('Authentication required', 401);
             }
 
-            // Verify user is HR
             if (req.user?.role !== 'HR') {
                 throw new ApiError(
                     'Access denied. Only HR can approve/reject leave requests',
@@ -78,7 +76,6 @@ const updateLeaveStatus = asyncHandler(
                 body: req.body,
             });
 
-            // 3. Update leave status via service
             const updatedLeave = await leaveService.updateStatus(
                 params.id,
                 body.status,
