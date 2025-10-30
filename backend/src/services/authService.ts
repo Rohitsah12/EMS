@@ -6,6 +6,7 @@ import { ApiError } from '../utils/apiError.js';
 import { config } from '../config/index.js';
 import type { RegisterEmployeeInput, LoginUserInput } from '../api/validation/auth.validation.js';
 import type { Employee, UserRole } from '@prisma/client';
+import { da } from 'zod/locales';
 
 class AuthService {
 
@@ -45,7 +46,7 @@ class AuthService {
 
         return { accessToken, refreshToken };
     }
-  
+
     private async _generateEmployeeId(): Promise<string> {
         const lastEmployee = await prisma.employee.findFirst({
             orderBy: { createdAt: 'desc' },
@@ -63,11 +64,11 @@ class AuthService {
         return `EMP-${String(nextIdNumber).padStart(3, '0')}`;
     }
 
-   
+
     public async registerEmployee(
         employeeData: RegisterEmployeeInput
     ): Promise<Omit<Employee, 'passwordHash'>> {
-        let { name, email, password, ...restOfData } = employeeData;
+        let { name, email, password, dateOfBirth, ...restOfData } = employeeData;
 
         email = email.toLowerCase();
         name = name
@@ -76,15 +77,16 @@ class AuthService {
             .join(' ');
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
         const employeeId = await this._generateEmployeeId();
+
 
         const newEmployee = await prisma.employee.create({
             data: {
                 ...restOfData,
                 name,
                 email,
-                employeeId, 
+                employeeId,
+                dateOfBirth: new Date(dateOfBirth),
                 passwordHash: hashedPassword,
             } as any,
         });
@@ -93,7 +95,7 @@ class AuthService {
         return employeeWithoutPassword;
     }
 
-    
+
     public async loginEmployee(credentials: LoginUserInput) {
         const { email, password } = credentials;
 
@@ -115,7 +117,7 @@ class AuthService {
         return { ...tokens, employee: employeeWithoutPassword };
     }
 
-   
+
     public async logoutEmployee(employeeId: string) {
         await redisClient.del(employeeId);
     }
