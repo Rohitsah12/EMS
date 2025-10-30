@@ -14,6 +14,11 @@ export const createDepartmentSchema = z.object({
       .uuid('Invalid manager ID format')
       .optional()
       .nullable(),
+    annualBudget: z
+      .number()
+      .positive('Annual budget must be positive')
+      .optional()
+      .nullable(),
   }),
 });
 
@@ -30,7 +35,12 @@ export const updateDepartmentSchema = z.object({
       .string()
       .uuid('Invalid manager ID format')
       .optional()
-      .nullable(), 
+      .nullable(),
+    annualBudget: z
+      .number()
+      .positive('Annual budget must be positive')
+      .optional()
+      .nullable(),
   }),
 });
 

@@ -42,6 +42,7 @@ model Department {
   employees   Employee[]
   manager     Employee?   @relation("ManagedDepartment", fields: [managerId], references: [id])
   managerId   String?     @unique
+  annualBudget  Decimal?  @db.Decimal(15, 2) @default(0.00)
 
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt

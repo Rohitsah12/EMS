@@ -7,7 +7,7 @@ import type {
 import type { Prisma } from '@prisma/client';
 
 class DepartmentService {
- 
+
   async create(data: CreateDepartmentInput) {
     const existing = await prisma.department.findUnique({
       where: { name: data.name },
@@ -25,6 +25,9 @@ class DepartmentService {
         connect: { id: data.managerId },
       };
     }
+    if (data.annualBudget) {
+      createData.annualBudget = data.annualBudget;
+    }
 
     const department = await prisma.department.create({
       data: createData,
@@ -34,25 +37,27 @@ class DepartmentService {
 
 
   async getAll() {
-    const departments = await prisma.department.findMany({
-      orderBy: { name: 'asc' },
-      include: {
-        // Include the manager's name and ID
-        manager: {
-          select: { id: true, name: true, employeeId: true },
-        },
-        // Include a count of how many employees are in this department
-        _count: {
-          select: { employees: true },
-        },
+  const departments = await prisma.department.findMany({
+    orderBy: { name: 'asc' },
+    include: {
+      manager: {
+        select: { id: true, name: true, employeeId: true },
       },
-    });
-    return departments;
-  }
+      _count: {
+        select: { employees: true },
+      },
+    },
+  });
 
-  /**
-   * @desc    Get a single department by its ID
-   */
+  // Calculate total budget
+  const totalBudget = departments.reduce((sum, dept) => {
+    return sum + (dept.annualBudget ? Number(dept.annualBudget) : 0);
+  }, 0);
+
+  return { departments, totalBudget };
+}
+
+  
   async getById(id: string) {
     const department = await prisma.department.findUnique({
       where: { id },
@@ -80,9 +85,7 @@ class DepartmentService {
     return department;
   }
 
-  /**
-   * @desc    Update a department's details
-   */
+
   async update(id: string, data: UpdateDepartmentInput) {
     // First, check if the department exists
     const existing = await prisma.department.findUnique({ where: { id } });
@@ -107,7 +110,7 @@ class DepartmentService {
     return updatedDepartment;
   }
 
-  
+
   async delete(id: string) {
     const employeeCount = await prisma.employee.count({
       where: { departmentId: id },
@@ -116,7 +119,7 @@ class DepartmentService {
     if (employeeCount > 0) {
       throw new ApiError(
         `Cannot delete department: ${employeeCount} employees are still assigned. Reassign them first.`,
-        400 
+        400
       );
     }
 

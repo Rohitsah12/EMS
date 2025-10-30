@@ -9,7 +9,7 @@ import {
   departmentIdParamSchema,
 } from '../validation/department.validation.js';
 
- const createDepartment = asyncHandler(
+const createDepartment = asyncHandler(
   async (req: Request, res: Response) => {
     const { body: data } = await createDepartmentSchema.parseAsync({
       body: req.body,
@@ -26,23 +26,15 @@ import {
 );
 
 
-const getAllDepartments = asyncHandler(
-  async (req: Request, res: Response) => {
-    const departments = await departmentService.getAll();
-    res
-      .status(200)
-      .json(
-        new ApiResponse(
-          'Departments fetched successfully',
-          departments,
-          true
-        )
-      );
-  }
-);
+const getAllDepartments = asyncHandler(async (req: Request, res: Response) => {
+  const result = await departmentService.getAll();
+  res.status(200).json(
+    new ApiResponse('Departments fetched successfully', result, true)
+  );
+});
 
 
- const getDepartmentById = asyncHandler(
+const getDepartmentById = asyncHandler(
   async (req: Request, res: Response) => {
     const { params } = await departmentIdParamSchema.parseAsync({
       params: req.params,
@@ -57,7 +49,7 @@ const getAllDepartments = asyncHandler(
   }
 );
 
- const updateDepartment = asyncHandler(
+const updateDepartment = asyncHandler(
   async (req: Request, res: Response) => {
     const { params, body: data } = await updateDepartmentSchema.parseAsync({
       params: req.params,
@@ -79,7 +71,7 @@ const getAllDepartments = asyncHandler(
 );
 
 
- const deleteDepartment = asyncHandler(
+const deleteDepartment = asyncHandler(
   async (req: Request, res: Response) => {
     const { params } = await departmentIdParamSchema.parseAsync({
       params: req.params,
