@@ -64,9 +64,21 @@ const deactivateEmployee = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json(new ApiResponse(result.message, null, true));
 });
 
+const getEmployeeLeaves = asyncHandler(async (req: Request, res: Response) => {
+  const { params } = await employeeIdParamSchema.parseAsync({
+    params: req.params,
+  });
+
+  const leaves = await employeeService.getEmployeeLeaves(params.id);
+  
+  res.status(200).json(
+    new ApiResponse('Employee leaves fetched successfully', leaves, true)
+  );
+});
 export const employeeController = {
   getAllEmployees,
   getEmployeeById,
   updateEmployee,
   deactivateEmployee,
+  getEmployeeLeaves
 };

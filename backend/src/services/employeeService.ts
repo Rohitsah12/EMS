@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prismaClient.js';
-import { ApiError }  from '../utils/apiError.js';
+import { ApiError } from '../utils/apiError.js';
 import bcrypt from 'bcryptjs';
 import type { GetAllEmployeesQuery, UpdateEmployeeInput } from '../api/validation/employee.validation.js';
 import type { Prisma } from '@prisma/client';
@@ -42,8 +42,19 @@ class EmployeeService {
           designation: true,
           isActive: true,
           joinDate: true,
+          dateOfBirth: true,        // ADD THIS
+          maritalStatus: true,      // ADD THIS
+          personalEmail: true,      // ADD THIS
+          phone: true,              // ADD THIS
+          address: true,            // ADD THIS
+          role: true,               // ADD THIS
+          createdAt: true,          // ADD THIS (optional)
+          updatedAt: true,          // ADD THIS (optional)
           department: {
-            select: { id: true, name: true },
+            select: {
+              id: true,
+              name: true
+            },
           },
         },
       }),
@@ -61,7 +72,7 @@ class EmployeeService {
     };
   }
 
-  
+
   async getById(id: string) {
     const employee = await prisma.employee.findUnique({
       where: { id },
@@ -78,7 +89,7 @@ class EmployeeService {
     return employeeWithoutPassword;
   }
 
-  
+
   async update(id: string, data: UpdateEmployeeInput) {
     const { password, ...restOfData } = data;
 
@@ -156,13 +167,38 @@ class EmployeeService {
     return employeeWithoutPassword;
   }
 
- 
+  async getEmployeeLeaves(employeeId: string) {
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+    });
+
+    if (!employee) {
+      throw new ApiError('Employee not found', 404);
+    }
+
+    const leaves = await prisma.leave.findMany({
+      where: { employeeId },
+      orderBy: { requestedAt: 'desc' },
+      include: {
+        approvedBy: {
+          select: {
+            id: true,
+            name: true,
+            employeeId: true,
+          },
+        },
+      },
+    });
+
+    return leaves;
+  }
+
   async deactivate(id: string) {
     const existing = await prisma.employee.findUnique({ where: { id } });
     if (!existing) {
       throw new ApiError('Employee not found', 404);
     }
-    
+
     if (!existing.isActive) {
       throw new ApiError('Employee is already inactive', 400);
     }

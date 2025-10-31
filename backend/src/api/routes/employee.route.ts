@@ -13,5 +13,6 @@ router.get('/:id', employeeController.getEmployeeById);
 router.patch('/:id', employeeController.updateEmployee);
 
 router.delete('/:id', employeeController.deactivateEmployee);
+router.get('/:id/leaves', employeeController.getEmployeeLeaves);
 
 export default router;

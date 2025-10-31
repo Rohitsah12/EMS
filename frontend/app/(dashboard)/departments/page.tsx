@@ -200,6 +200,7 @@ export default function DepartmentsPage() {
         isActive: true,
         joinDate: "",
         department: { id: "", name: "" },
+        role: "",
       });
       setManagerSearch(department.manager.name);
     }

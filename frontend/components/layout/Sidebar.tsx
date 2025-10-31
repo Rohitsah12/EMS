@@ -42,7 +42,7 @@ export default function Sidebar() {
       <div className="sidebar-header px-6 py-6 border-b border-white/10">
         <div className="sidebar-logo flex items-center gap-3">
           <Briefcase className="w-7 h-7" />
-          <span className="sidebar-logo-text text-2xl font-bold">HR Portal</span>
+          <span className="sidebar-logo-text text-2xl font-bold">Employee</span>
         </div>
         <div className="sidebar-subtitle text-xs text-white/70 mt-1">Management System</div>
       </div>
