@@ -25,14 +25,16 @@ export default function Sidebar() {
     
     setIsLoggingOut(true);
     try {
+      // Call logout - this clears Redux state immediately
       await logout();
-      router.push('/login');
+      
+      // Force navigation to login page
+      // Using window.location for a hard refresh ensures no cached state
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if logout API fails, redirect to login
-      router.push('/login');
-    } finally {
-      setIsLoggingOut(false);
+      // Even if there's an error, force redirect
+      window.location.href = '/login';
     }
   };
 
