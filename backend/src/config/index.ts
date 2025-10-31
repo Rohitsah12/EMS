@@ -5,6 +5,9 @@ dotenv.config();
 export const config = {
     nodeEnv: process.env.NODE_ENV || "development",
     port: process.env.PORT || 8000,
+    allowedOrigins: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : ['http://localhost:3000'],
     frontend_url : process.env.FRONTEND_URL || "http://localhost:3000",
     databaseUrl: process.env.DATABASE_URL || "your_database_url",
   
