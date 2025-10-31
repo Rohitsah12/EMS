@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Briefcase, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Briefcase, Loader2, AlertCircle, Eye, EyeOff, Copy, Check } from 'lucide-react';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -15,6 +15,17 @@ export default function LoginForm() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [passwordError, setPasswordError] = useState('');
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+
+  const strongPasswordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+
+  const testingCredentials = {
+    email: 'johndoe@company.com',
+    password: 'Password@123',
+  };
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -26,8 +37,44 @@ export default function LoginForm() {
     }
   }, [isAuthenticated, router]);
 
+  const validatePassword = (password: string): boolean => {
+    if (!password) {
+      setPasswordError('Password is required');
+      return false;
+    }
+    if (!strongPasswordRegex.test(password)) {
+      setPasswordError(
+        'Password must be at least 8 characters and include uppercase, lowercase, number, and special character'
+      );
+      return false;
+    }
+    setPasswordError('');
+    return true;
+  };
+
+  const copyToClipboard = async (text: string, type: 'email' | 'password') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      
+      if (type === 'email') {
+        setCopiedEmail(true);
+        setTimeout(() => setCopiedEmail(false), 2000);
+      } else {
+        setCopiedPassword(true);
+        setTimeout(() => setCopiedPassword(false), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate password before submitting
+    if (!validatePassword(formData.password)) {
+      return;
+    }
 
     try {
       const result = await login(formData);
@@ -40,10 +87,22 @@ export default function LoginForm() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+
+    // Clear password error when user starts typing
+    if (name === 'password' && passwordError) {
+      setPasswordError('');
+    }
+  };
+
+  const handlePasswordBlur = () => {
+    if (formData.password) {
+      validatePassword(formData.password);
+    }
   };
 
   // 🔄 Show loading while checking authentication
@@ -80,6 +139,66 @@ export default function LoginForm() {
         </CardHeader>
 
         <CardContent>
+          {/* Testing Credentials Info */}
+          <div className="mb-6 p-4 bg-blue-800/50 border border-blue-600/50 rounded-lg">
+            <p className="text-xs font-semibold text-blue-200 mb-3">Testing Credentials:</p>
+            <div className="space-y-3">
+              {/* Email Row */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1">
+                  <p className="text-xs text-blue-300 mb-1">Email:</p>
+                  <p className="text-sm text-blue-100 font-medium break-all">
+                    {testingCredentials.email}
+                  </p>
+                </div>
+                <button
+                  onClick={() => copyToClipboard(testingCredentials.email, 'email')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-700/50 hover:bg-blue-700 border border-blue-600/50 rounded text-xs font-medium text-blue-100 transition-all duration-150"
+                  type="button"
+                >
+                  {copiedEmail ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Password Row */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1">
+                  <p className="text-xs text-blue-300 mb-1">Password:</p>
+                  <p className="text-sm text-blue-100 font-medium">
+                    {testingCredentials.password}
+                  </p>
+                </div>
+                <button
+                  onClick={() => copyToClipboard(testingCredentials.password, 'password')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-700/50 hover:bg-blue-700 border border-blue-600/50 rounded text-xs font-medium text-blue-100 transition-all duration-150"
+                  type="button"
+                >
+                  {copiedPassword ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
           {error && (
             <div className="mb-4 p-3 bg-red-100/90 border border-red-300 rounded-lg flex items-start gap-2 text-red-800">
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -117,9 +236,12 @@ export default function LoginForm() {
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={handleChange}
+                  onBlur={handlePasswordBlur}
                   required
                   disabled={isLoading}
-                  className="h-11 bg-blue-800/60 border border-blue-600/50 text-white placeholder:text-blue-300 focus:ring-2 focus:ring-blue-500 pr-10"
+                  className={`h-11 bg-blue-800/60 border ${
+                    passwordError ? 'border-red-400' : 'border-blue-600/50'
+                  } text-white placeholder:text-blue-300 focus:ring-2 focus:ring-blue-500 pr-10`}
                 />
                 <button
                   type="button"
@@ -130,6 +252,12 @@ export default function LoginForm() {
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+              {passwordError && (
+                <p className="text-xs text-red-300 mt-1 flex items-start gap-1">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                  <span>{passwordError}</span>
+                </p>
+              )}
             </div>
 
             <Button

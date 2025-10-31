@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { dashboardApi, DashboardStats } from "@/lib/api/dashboardApi";
+import { leaveApi } from "@/lib/api/leaveApi";
 import {
   Users,
   Building2,
@@ -16,10 +17,13 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [attendanceDays, setAttendanceDays] = useState(3);
-  const [leaveDays, setLeaveDays] = useState(5);
+  const [leaveDays, setLeaveDays] = useState(4);
   const [tableFilter, setTableFilter] = useState<
     "all" | "pending" | "approved" | "rejected"
   >("all");
+  const [processingLeaveId, setProcessingLeaveId] = useState<string | null>(
+    null
+  );
 
   const fetchStats = async () => {
     try {
@@ -48,6 +52,31 @@ export default function DashboardPage() {
     type: "all" | "pending" | "approved" | "rejected"
   ) => {
     setTableFilter(type);
+  };
+
+  const handleLeaveAction = async (
+    leaveId: string,
+    status: "APPROVED" | "REJECTED"
+  ) => {
+    try {
+      setProcessingLeaveId(leaveId);
+
+      await leaveApi.updateStatus(leaveId, { status });
+
+      toast.success(`Leave request ${status.toLowerCase()} successfully!`);
+
+      // Refresh the dashboard data
+      await fetchStats();
+    } catch (error: unknown) {
+      console.error(`Error ${status.toLowerCase()} leave:`, error);
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(
+        err.response?.data?.message ||
+          `Failed to ${status.toLowerCase()} leave request`
+      );
+    } finally {
+      setProcessingLeaveId(null);
+    }
   };
 
   const filteredRequests =
@@ -366,11 +395,37 @@ export default function DashboardPage() {
                         <div className="flex gap-2">
                           {req.status === "PENDING" ? (
                             <>
-                              <button className="px-4 py-1.5 bg-green-600 text-white text-sm font-semibold rounded-md hover:bg-green-700 transition-colors">
-                                Approve
+                              <button
+                                onClick={() =>
+                                  handleLeaveAction(req.id, "APPROVED")
+                                }
+                                disabled={processingLeaveId === req.id}
+                                className="px-4 py-1.5 bg-green-600 text-white text-sm font-semibold rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                              >
+                                {processingLeaveId === req.id ? (
+                                  <>
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    Processing...
+                                  </>
+                                ) : (
+                                  "Approve"
+                                )}
                               </button>
-                              <button className="px-4 py-1.5 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 transition-colors">
-                                Reject
+                              <button
+                                onClick={() =>
+                                  handleLeaveAction(req.id, "REJECTED")
+                                }
+                                disabled={processingLeaveId === req.id}
+                                className="px-4 py-1.5 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                              >
+                                {processingLeaveId === req.id ? (
+                                  <>
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    Processing...
+                                  </>
+                                ) : (
+                                  "Reject"
+                                )}
                               </button>
                             </>
                           ) : (
