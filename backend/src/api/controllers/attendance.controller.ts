@@ -8,6 +8,7 @@ import {
   createOrUpdateAttendanceSchema,
   updateAttendanceSchema,
   attendanceIdParamSchema,
+  getEmployeeAttendanceSchema,
 } from '../validation/attendance.validation.js';
 
 
@@ -103,6 +104,51 @@ const deleteAttendance = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json(new ApiResponse(result.message, null, true));
 });
 
+const getAttendanceSummary = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await attendanceService.getAttendanceSummary();
+    
+    res.status(200).json(
+      new ApiResponse(
+        'Attendance summary fetched successfully',
+        result,
+        true
+      )
+    );
+  }
+);
+
+const getEmployeeAttendance = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id: employeeId } = req.params;
+    
+    const { query } = await getEmployeeAttendanceSchema.parseAsync({
+      query: req.query,
+    });
+
+    const filteredQuery = {
+      page: query.page,
+      limit: query.limit,
+      ...(query.startDate !== undefined && { startDate: query.startDate }),
+      ...(query.endDate !== undefined && { endDate: query.endDate }),
+      ...(query.status !== undefined && { status: query.status }),
+    };
+    
+    const result = await attendanceService.getEmployeeAttendance(
+      employeeId!,
+      filteredQuery
+    );
+    
+    res.status(200).json(
+      new ApiResponse(
+        'Employee attendance fetched successfully',
+        result,
+        true
+      )
+    );
+  }
+);
+
 // Export as a controller object
 export const attendanceController = {
   createOrUpdateAttendance,
@@ -110,4 +156,6 @@ export const attendanceController = {
   getAttendanceById,
   updateAttendance,
   deleteAttendance,
+  getAttendanceSummary,
+  getEmployeeAttendance,
 };

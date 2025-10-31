@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Briefcase, LayoutDashboard, Users, Building2, Calendar, LogOut } from 'lucide-react';
+import { Briefcase, LayoutDashboard, Users, Building2, Calendar, LogOut, CalendarCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
 
@@ -10,6 +10,7 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
   { id: 'employees', label: 'Employees', icon: Users, href: '/employees' },
   { id: 'departments', label: 'Departments', icon: Building2, href: '/departments' },
+  { id: 'attendance', label: 'Attendance', icon: CalendarCheck, href: '/attendance' },
   { id: 'leave', label: 'Leave Requests', icon: Calendar, href: '/leave' },
 ];
 

@@ -5,6 +5,9 @@ import { requireAuth, isHR } from '../../middleware/auth.middleware.js';
 const router = Router();
 
 router.use(requireAuth, isHR);
+router.get('/summary', attendanceController.getAttendanceSummary);
+
+router.get('/employee/:id', attendanceController.getEmployeeAttendance);
 
 router.get('/', attendanceController.getAllAttendance);
 

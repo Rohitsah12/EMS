@@ -2,6 +2,7 @@ import http from "http";
 import app from "./app.js"; 
 import { config } from "./config/index.js";
 import { connectRedis, redisClient } from "./lib/redisClient.js"; 
+import { startAttendanceCronJob } from "./cron/markAbsentAttendance.js";
 
 async function startServer() {
   const server = http.createServer(app);
@@ -17,6 +18,7 @@ async function startServer() {
   const port = config.port;
   server.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
+    startAttendanceCronJob();
   });
 
   const shutdown = (signal: string) => {

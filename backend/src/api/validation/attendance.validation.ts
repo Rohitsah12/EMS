@@ -51,7 +51,15 @@ export const updateAttendanceSchema = z.object({
     })
     .strict(), 
 });
-
+export const getEmployeeAttendanceSchema = z.object({
+  query: z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
+    status: z.nativeEnum(AttendanceStatus).optional(),
+  }),
+});
 export type GetAllAttendanceQuery = z.infer<
   typeof getAllAttendanceQuerySchema
 >['query'];
@@ -61,3 +69,7 @@ export type CreateOrUpdateAttendanceInput = z.infer<
 export type UpdateAttendanceInput = z.infer<
   typeof updateAttendanceSchema
 >['body'];
+
+export type GetEmployeeAttendanceQuery = z.infer<
+  typeof getEmployeeAttendanceSchema
+>['query'];
