@@ -7,7 +7,7 @@ import { Toaster } from 'sonner';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'HR Portal - Management System',
+  title: 'Employee - Management System',
   description: 'Human Resource Management System',
 };
 
