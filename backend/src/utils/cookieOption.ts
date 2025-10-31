@@ -20,12 +20,17 @@ type TokenType = 'access' | 'refresh';
 export const generateCookieOptions = (req: Request, tokenType: TokenType) => {
     const forwardedProto = (req.headers['x-forwarded-proto'] as string) || '';
     const isSecureRequest = req.secure || forwardedProto === 'https';
-    const secure = config.nodeEnv === 'production' && isSecureRequest;
+    const isProduction = config.nodeEnv === 'production';
+    
+    // In production, always use secure cookies
+    const secure = isProduction;
+    
     const maxAge = tokenType === 'access'
         ? parseTimeUnitToMs(config.jwtAccessExpiration!, 15 * 60 * 1000)
         : parseTimeUnitToMs(config.jwtRefreshExpiration!, 7 * 24 * 60 * 60 * 1000);
 
-    const sameSite: "lax" | "strict" | "none" = secure ? "none" : "lax";
+  
+    const sameSite: "lax" | "strict" | "none" = isProduction ? "none" : "lax";
 
     return {
         httpOnly: true,
@@ -33,5 +38,6 @@ export const generateCookieOptions = (req: Request, tokenType: TokenType) => {
         sameSite,
         path: '/',
         maxAge,
+        ...(isProduction && config.cookieDomain ? { domain: config.cookieDomain } : {}),
     };
 };

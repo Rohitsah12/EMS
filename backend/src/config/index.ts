@@ -12,6 +12,7 @@ export const config = {
     databaseUrl: process.env.DATABASE_URL || "your_database_url",
   
     jwtAccessSecret: process.env.JWT_ACCESS_SECRET || "SecretKey",
+    cookieDomain: process.env.COOKIE_DOMAIN || "",
     jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || "SecretKey",
     jwtAccessExpiration: process.env.JWT_ACCESS_EXPIRATION ,
     jwtRefreshExpiration: process.env.JWT_REFRESH_EXPIRATION ,
